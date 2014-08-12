@@ -253,7 +253,7 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 #endif
 
 	mutex_lock(&mdss_mdp_smp_lock);
-	if (pipe->src_fmt->is_yuv || (pipe->flags & MDP_BACKEND_COMPOSITION)) {
+	if (pipe->src_fmt->is_yuv || (pipe->flags & MDP_SMP_FORCE_ALLOC)) {
 	for (i = (MAX_PLANES - 1); i >= ps.num_planes; i--) {
 		if (bitmap_weight(pipe->smp_map[i].allocated, SMP_MB_CNT)) {
 			pr_debug("Extra mmb identified for pnum=%d plane=%d\n",
