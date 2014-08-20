@@ -104,6 +104,8 @@
 
 #define HPH_TRANS_THRESHOLD 2
 
+#define HPH_TRANS_THRESHOLD 2
+
 /*
  * Threshold used to detect euro headset
  * with current source
