@@ -624,4 +624,3 @@ extern u32 es705_streaming_cmds[];
 #define ES705_STREAM_ENABLE	1
 
 #endif /* _ES705_H */
-

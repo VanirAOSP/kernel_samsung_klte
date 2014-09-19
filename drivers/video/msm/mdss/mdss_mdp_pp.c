@@ -3899,23 +3899,6 @@ int mdss_mdp_ad_config(struct msm_fb_data_type *mfd,
 		} else
 			ad->state |= PP_AD_STATE_BL_LIN;
 
-		if ((init_cfg->params.init.bl_att_len == AD_BL_ATT_LUT_LEN) &&
-			(init_cfg->params.init.bl_att_lut)) {
-			att_ret = copy_from_user(&ad->bl_att_lut,
-				init_cfg->params.init.bl_att_lut,
-				init_cfg->params.init.bl_att_len *
-				sizeof(uint32_t));
-			if (att_ret)
-				ret = -ENOMEM;
-		} else {
-			ret = -EINVAL;
-		}
-		if (ret) {
-			ad->state &= ~PP_AD_STATE_BL_LIN;
-			goto ad_config_exit;
-		} else
-			ad->state |= PP_AD_STATE_BL_LIN;
-
 		ad->sts |= PP_AD_STS_DIRTY_INIT;
 	} else if (init_cfg->ops & MDP_PP_AD_CFG) {
 		memcpy(&ad->cfg, &init_cfg->params.cfg,

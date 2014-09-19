@@ -1014,16 +1014,6 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 		return ret;
 	}
 
-	if (!ctl) {
-		pr_warn("kickoff on fb=%d without a ctl attched\n", mfd->index);
-		return ret;
-	}
-
-	if (!ctl) {
-		pr_warn("kickoff on fb=%d without a ctl attched\n", mfd->index);
-		return ret;
-	}
-
 	if (ctl->shared_lock)
 		mutex_lock(ctl->shared_lock);
 
