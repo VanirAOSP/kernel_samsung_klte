@@ -45,6 +45,7 @@ extern ssize_t store_auto_hotplug_enable_core_loads(struct cpufreq_policy *polic
 int GLOBALKT_MIN_FREQ_LIMIT = 300000;
 int GLOBALKT_MAX_FREQ_LIMIT = 2457600;
 
+unsigned int main_cpufreq_control[10];
 
 unsigned int vfreq_lock = 0;
 static bool vfreq_lock_tempOFF = false;
@@ -541,8 +542,10 @@ static void __cpuinit set_cpu_min_max_work_fn(struct work_struct *work)
 		int cpu, ret;
 		for (cpu = work_speed_core_start; cpu < CPUS_AVAILABLE; cpu++)
 		{
-			if (!cpu_online(cpu)) cpu_up(cpu);
-			usleep(50);
+			main_cpufreq_control[cpu] = 1;
+			if (!cpu_online(cpu))
+				cpu_up(cpu);
+			//usleep(50);
 			if (cpu_online(cpu))
 			{
 				struct cpufreq_policy *policyorig = cpufreq_cpu_get_sysfs(cpu);
@@ -562,14 +565,18 @@ static void __cpuinit set_cpu_min_max_work_fn(struct work_struct *work)
 						new_policy.user_policy.max = new_policy.max;
 					}
 					//pr_alert("SET EXTRA CORES 1 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
-					__cpufreq_set_policy(policyorig, &new_policy);
-					if (work_speed_min)
-						policyorig->user_policy.min = policyorig->min;
-					if (work_speed_max)
-						policyorig->user_policy.max = policyorig->max;
+					if (cpu_online(cpu))
+					{
+						__cpufreq_set_policy(policyorig, &new_policy);
+						if (work_speed_min)
+							policyorig->user_policy.min = policyorig->min;
+						if (work_speed_max)
+							policyorig->user_policy.max = policyorig->max;
+					}
 					//pr_alert("SET EXTRA CORES 2 - %d - %d - %d - %d - %d - %d - %d", cpu, policyorig->cpu, new_policy.min, new_policy.max, policyorig->min, policyorig->max, policyorig->user_policy.max);
 				}
 			}				
+			main_cpufreq_control[cpu] = 0;
 		}
 	}
 }
@@ -631,6 +638,7 @@ static ssize_t __ref store_scaling_min_freq(struct cpufreq_policy *policy, const
 		if (value <= GLOBALKT_MIN_FREQ_LIMIT)
 			value = GLOBALKT_MIN_FREQ_LIMIT;
 
+		main_cpufreq_control[policy->cpu] = 1;
 		if (!cpu_online(policy->cpu)) cpu_up(policy->cpu);
 
 		ret = cpufreq_get_policy(&new_policy, policy->cpu);
@@ -640,13 +648,14 @@ static ssize_t __ref store_scaling_min_freq(struct cpufreq_policy *policy, const
 		ret = __cpufreq_set_policy(policy, &new_policy);
 		policy->user_policy.min = policy->min;
 
+		main_cpufreq_control[policy->cpu] = 0;
 		//Set extra CPU cores to same speed
 		if (policy->cpu == 0)
 			set_cpu_min_max(value, 0, 1);
 
-	Lbluetooth_scaling_mhz_orig = value;
-	Lmusic_play_scaling_mhz_orig = value;
-	Lcharging_min_mhz_orig = value;
+		Lbluetooth_scaling_mhz_orig = value;
+		Lmusic_play_scaling_mhz_orig = value;
+		Lcharging_min_mhz_orig = value;
 	}
 	
 	return count;
@@ -669,6 +678,7 @@ static ssize_t __ref store_scaling_max_freq(struct cpufreq_policy *policy, const
 		if (value < GLOBALKT_MIN_FREQ_LIMIT)
 			value = GLOBALKT_MIN_FREQ_LIMIT;
 
+		main_cpufreq_control[policy->cpu] = 1;
 		if (!cpu_online(policy->cpu)) cpu_up(policy->cpu);
 
 		ret = cpufreq_get_policy(&new_policy, policy->cpu);
@@ -678,6 +688,7 @@ static ssize_t __ref store_scaling_max_freq(struct cpufreq_policy *policy, const
 		ret = __cpufreq_set_policy(policy, &new_policy);
 		policy->user_policy.max = policy->max;
 
+		main_cpufreq_control[policy->cpu] = 0;
 		//Set extra CPU cores to same speed
 		if (policy->cpu == 0)
 			set_cpu_min_max(0, value, 1);
@@ -2458,7 +2469,8 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 #else
 	struct cpufreq_governor *gov = NULL;
 #endif
-
+	if (!policy->governor)
+		return -EINVAL;
 	if (policy->governor->max_transition_latency &&
 	    policy->cpuinfo.transition_latency >
 	    policy->governor->max_transition_latency) {
@@ -2666,8 +2678,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 		if (policy->governor != data->governor || cpu_dup_gov) {
 			/* save old, working values */
 			struct cpufreq_governor *old_gov = data->governor;
-
-			pr_debug("governor switch\n");
+			//pr_alert("governor switch1: %s - %d\n", policy->governor->name, policy->cpu);
 
 			/* end old governor */
 			if (data->governor)
@@ -2678,9 +2689,10 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 				data->governor = trmlpolicy[0].governor;
 			else
 				data->governor = policy->governor;
+			//pr_alert("governor switch2 - %d\n", policy->cpu);
 			if (__cpufreq_governor(data, CPUFREQ_GOV_START)) {
 				/* new governor failed, so re-start old one */
-				pr_debug("starting governor %s failed\n",
+				pr_alert("starting governor %s failed\n",
 							data->governor->name);
 				if (old_gov) {
 					data->governor = old_gov;
@@ -2690,6 +2702,7 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 				ret = -EINVAL;
 				goto error_out;
 			}
+			//pr_alert("governor switch3 - %d\n", policy->cpu);
 			/* might be a policy change, too, so fall through */
 		}
 		pr_debug("governor: change or update limits\n");
