@@ -2208,7 +2208,7 @@ void ktoonservative_boostpulse(bool boost_for_button)
 			for (cpu = 0; cpu < CPUS_AVAILABLE; cpu++)
 			{
 				if (Lblock_cycles_offline_OVERRIDE[cpu] > 0 || Lblock_cycles_offline_OVERRIDE[cpu] == OVERRIDE_DISABLER)
-					Lblock_cycles_offline_OVERRIDE[cpu] = (dbs_tuners_ins.block_cycles_offline_screen_on * -4);
+					Lblock_cycles_offline_OVERRIDE[cpu] = (dbs_tuners_ins.block_cycles_offline_screen_on * -1);
 			}
 		}
 		for (cpu = 0; cpu < CPUS_AVAILABLE; cpu++)
@@ -2462,7 +2462,7 @@ struct cpufreq_governor cpufreq_gov_ktoonservative = {
 
 static int __init cpufreq_gov_dbs_init(void)
 {
-	dbs_wq = alloc_workqueue("ktoonservativeq_dbs_wq", WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
+	dbs_wq = alloc_workqueue("ktoonservativeq_dbs_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!dbs_wq) {
 		printk(KERN_ERR "Failed to create ktoonservativeq_dbs_wq workqueue\n");
 		return -EFAULT;
